@@ -69,11 +69,14 @@ public class Application extends Controller {
     };
   }
 
+  /*
+   * Example: http://localhost:9000/checkin/99000293000988
+   */
   public static Promise<Result> checkin(String id) {
 
-    Promise<WS.Response> checkinListPromise = WS.url("http://lotus-stresstest.appspot.com/guide/passport")
+    Promise<WS.Response> checkinListPromise = WS.url("http://dspipeline.appspot.com/guide/passport")
       // .setQueryParameter("imei", "99000293000988")
-      .setQueryParameter("imei", id)
+      .setQueryParameter("serialNumber", id)
       .setQueryParameter("limit", "10")
       .get();
 
@@ -86,10 +89,14 @@ public class Application extends Controller {
 
 	  while (checkins.hasNext()) {
 	    JsonNode jn = checkins.next();
+/*
 	    String l = jn.findPath("link").textValue();
 	    String[] la = l.split("\\?");
 	    String[] lb = la[1].split("=");
 	    promiseList.add(WS.url(la[0]).setQueryParameter(lb[0], lb[1]).get());
+*/
+	    String l = jn.findPath("passportId").textValue();
+	    promiseList.add(WS.url("http://dspipeline.appspot.com/processor/processcheckin").setQueryParameter("passport-id", l).get());
 	  }
 	  Promise<WS.Response>[] promiseArray = promiseList.toArray(new Promise[promiseList.size()]);
 	  Promise<List<WS.Response>> promiseSequence = Promise.sequence(promiseArray);
@@ -101,7 +108,8 @@ public class Application extends Controller {
 		String s = "";
 		ArrayNode an = Json.newObject().arrayNode();
 		for (WS.Response resp : resps) {
-		  Iterator<JsonNode> events = resp.asJson().findPath("events_").elements();
+		  // Iterator<JsonNode> events = resp.asJson().findPath("events_").elements();
+		  Iterator<JsonNode> events = resp.asJson().findPath("parsedRecords").elements();
 		  while (events.hasNext()) {
 		    an.add(events.next());
 		  }
