@@ -8,6 +8,7 @@ import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.Results;
+import play.mvc.WebSocket;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -17,16 +18,62 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import models.*;
+
 public class Application extends Controller {
+
+  public static WebSocket<String> index() {
+    return new WebSocket<String>() {
+	
+      // Called when the Websocket Handshake is done.
+      public void onReady(WebSocket.In<String> in, final WebSocket.Out<String> out) {
+	
+	// For each event received on the socket,
+	in.onMessage(new Callback<String>() {
+	   public void invoke(String event) {
+	       
+	     // Log events to the console
+	     Logger.debug(event);  
+	     out.write("received " + event);
+	   } 
+	});
+	
+	// When the socket is closed.
+	in.onClose(new Callback0() {
+	   public void invoke() {
+	       
+	     Logger.debug("Disconnected");
+	       
+	   }
+	});
+	
+	// Send a single 'Hello!' message
+	out.write("Hello!");
+	
+      }
+      
+    };
+  }
   
-  public static Result index() {
-    return ok("hello world");
+  public static WebSocket<JsonNode> analyze(final String id) {
+    return new WebSocket<JsonNode>() {
+	
+      // Called when the Websocket Handshake is done.
+      public void onReady(WebSocket.In<JsonNode> in, WebSocket.Out<JsonNode> out) {
+	try { 
+	  Tricorder.analyze(id, in, out);
+	} catch (Exception ex) {
+	  ex.printStackTrace();
+	}
+      }
+    };
   }
 
-  public static Promise<Result> async() {
+  public static Promise<Result> checkin(String id) {
 
     Promise<WS.Response> checkinListPromise = WS.url("http://lotus-stresstest.appspot.com/guide/passport")
-      .setQueryParameter("imei", "99000293000988")
+      // .setQueryParameter("imei", "99000293000988")
+      .setQueryParameter("imei", id)
       .setQueryParameter("limit", "10")
       .get();
 
