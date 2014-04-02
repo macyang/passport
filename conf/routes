@@ -4,7 +4,7 @@
 
 # Home page
 # GET     /                           controllers.Application.index()
-GET     /checkin/:id		    controllers.Application.checkin(id)
+GET     /checkin/:id		    controllers.Application.checkin(id:String, filter:String, column:String)
 GET     /socket                    controllers.Application.index()
 
 # Map static resources from the /public folder to the /assets URL path

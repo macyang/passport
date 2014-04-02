@@ -72,7 +72,9 @@ public class Application extends Controller {
   /*
    * Example: http://localhost:9000/checkin/99000293000988
    */
-  public static Promise<Result> checkin(String id) {
+  public static Promise<Result> checkin(String id, final String filter, final String column) {
+
+    Logger.debug("column = " + column);
 
     Promise<WS.Response> checkinListPromise = WS.url("http://dspipeline.appspot.com/guide/passport")
       // .setQueryParameter("imei", "99000293000988")
@@ -96,7 +98,10 @@ public class Application extends Controller {
 	    promiseList.add(WS.url(la[0]).setQueryParameter(lb[0], lb[1]).get());
 */
 	    String l = jn.findPath("passportId").textValue();
-	    promiseList.add(WS.url("http://dspipeline.appspot.com/processor/processcheckin").setQueryParameter("passport-id", l).get());
+	    promiseList.add(WS.url("http://dspipeline.appspot.com/processor/processcheckin")
+	      .setQueryParameter("passport-id", l)
+	      .setQueryParameter("filter", filter)
+	      .get());
 	  }
 	  Promise<WS.Response>[] promiseArray = promiseList.toArray(new Promise[promiseList.size()]);
 	  Promise<List<WS.Response>> promiseSequence = Promise.sequence(promiseArray);
