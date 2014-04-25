@@ -10,8 +10,12 @@ import play.mvc.Result;
 import play.mvc.Results;
 import play.mvc.WebSocket;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -79,7 +83,7 @@ public class Application extends Controller {
       // .setQueryParameter("imei", "990002025609437")
       .setQueryParameter("serialnumber", id)
       .setQueryParameter("since", since)
-      .setQueryParameter("limit", "200")
+      .setQueryParameter("limit", "500")
       .setQueryParameter("tagfilter", filter)
       .get();
 Logger.debug("xxx serialnumber = " + id);
@@ -109,14 +113,40 @@ Logger.debug("xxx passportid = " + l);
 	      @Override
 	      public Result apply(List<WS.Response> resps) {
 		String s = "";
+		ObjectMapper mapper = new ObjectMapper();
 		ArrayNode an = Json.newObject().arrayNode();
 		for (WS.Response resp : resps) {
 		  // Iterator<JsonNode> events = resp.asJson().findPath("events_").elements();
 		  Iterator<JsonNode> events = resp.asJson().findPath("parsedRecords").elements();
+/*
+http://107.178.223.122:9000/checkin/990002025609437?filter=MOT_DEVICE_STATS:AppUsage&since=2014-04-15&limit=300
+NOTE: this is not general purpose code, only work with the AppUsage data for the demo
+A event looks like this,
+{
+event: "{"ID":"appdata","package":"com.google.android.youtube","app_duration_ms":"6137442","launch_count":"14","user1_or_pre0_install":"0"}",
+tag: "MOT_DEVICE_STATS",
+devicetime: "2014-04-24 05:00:07",
+idtag: "AppUsage",
+segid: "appdata",
+ltime: "2014-04-24 05:04:51"
+}
+ */
 		  while (events.hasNext()) {
-		    an.add(events.next());
+		    try {
+		    JsonNode jn = events.next();
+		    if ("appdata".equals(jn.get("segid").textValue())) {
+		      String date = jn.get("devicetime").textValue().substring(0, 10);
+		      ObjectNode event = mapper.readValue(jn.get("event").textValue(), ObjectNode.class);
+		      event.remove("ID");
+		      event.put("date", date);
+		      an.add(event);
+		    }
+		    } catch (Exception e) {
+		      Logger.debug(e.getMessage());
+		    }
 		  }
 		}
+		response().setHeader("Access-Control-Allow-Origin", "*");
 		return ok(an.toString());
 	      }
 	    }
@@ -124,5 +154,13 @@ Logger.debug("xxx passportid = " + l);
 	}
       }
     );
+  }
+
+  public static Result checkPreFlight() {
+      response().setHeader("Access-Control-Allow-Origin", "*");       // Need to add the correct domain in here!!
+      // response().setHeader("Access-Control-Allow-Methods", "POST");   // Only allow POST
+      response().setHeader("Access-Control-Max-Age", "300");          // Cache response for 5 minutes
+      response().setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");         // Ensure this header is also allowed!  
+      return ok();
   }
 }
