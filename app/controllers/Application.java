@@ -72,15 +72,17 @@ public class Application extends Controller {
   /*
    * Example: http://localhost:9000/checkin/99000293000988
    */
-  public static Promise<Result> checkin(String id, final String filter, final String column) {
-
-    Logger.debug("column = " + column);
+  public static Promise<Result> checkin(String id, final String since, final String filter) {
 
     Promise<WS.Response> checkinListPromise = WS.url("http://dspipeline.appspot.com/guide/passport")
       // .setQueryParameter("imei", "99000293000988")
-      .setQueryParameter("serialNumber", id)
-      .setQueryParameter("limit", "10")
+      // .setQueryParameter("imei", "990002025609437")
+      .setQueryParameter("serialnumber", id)
+      .setQueryParameter("since", since)
+      .setQueryParameter("limit", "200")
+      .setQueryParameter("tagfilter", filter)
       .get();
+Logger.debug("xxx serialnumber = " + id);
 
     return checkinListPromise.flatMap(
       new Function<WS.Response, Promise<Result>>() {
@@ -91,16 +93,12 @@ public class Application extends Controller {
 
 	  while (checkins.hasNext()) {
 	    JsonNode jn = checkins.next();
-/*
-	    String l = jn.findPath("link").textValue();
-	    String[] la = l.split("\\?");
-	    String[] lb = la[1].split("=");
-	    promiseList.add(WS.url(la[0]).setQueryParameter(lb[0], lb[1]).get());
-*/
-	    String l = jn.findPath("passportId").textValue();
+	    String l = jn.findPath("pid").textValue();
+Logger.debug("xxx passportid = " + l);
 	    promiseList.add(WS.url("http://dspipeline.appspot.com/processor/processcheckin")
-	      .setQueryParameter("passport-id", l)
-	      .setQueryParameter("filter", filter)
+	      .setQueryParameter("passportid", l)
+	      .setQueryParameter("tagfilter", filter)
+	      .setQueryParameter("column", "ltime,devicetime,tag,idtag,segid,event")
 	      .get());
 	  }
 	  Promise<WS.Response>[] promiseArray = promiseList.toArray(new Promise[promiseList.size()]);
